@@ -1,10 +1,5 @@
 """
-GameEngine: owns the player and all coins.
-
-Starter version: one coin type, no obstacles, no timer yet. Coin
-collection also has a known bug (see how `update` uses check_collection
-below) that Task 1 asks you to fix - collected coins are never removed,
-so standing on one keeps awarding points every frame.
+GameEngine: owns the player, coins, and obstacles.
 """
 
 import random
@@ -16,6 +11,7 @@ from game.collection import check_collection
 from game.renderer import WIDTH, HEIGHT
 
 NUM_COINS = 6
+NUM_LIVES = 3
 COIN_TYPES = {
     "bronze": (1, (205, 127, 50)),
     "silver": (3, (192, 192, 192)),
@@ -26,6 +22,14 @@ COIN_TYPES = {
 class GameEngine:
     def __init__(self):
         self.player = Player(x=WIDTH / 2, y=HEIGHT / 2)
+        self.obstacles = [
+            pygame.Rect(90, 100, 80, 30),
+            pygame.Rect(520, 110, 30, 85),
+            pygame.Rect(140, 350, 100, 30),
+            pygame.Rect(500, 360, 90, 30),
+        ]
+        self.lives = NUM_LIVES
+        self._player_touching_obstacle = False
         self.coins = [self._random_coin(coin_type) for coin_type in COIN_TYPES.values()]
         self.coins.extend(
             self._random_coin()
@@ -60,7 +64,16 @@ class GameEngine:
             self.score += coin.value
             self.coins.remove(coin)
 
+        player_rect = self.player.get_rect()
+        touching_obstacle = any(
+            player_rect.colliderect(obstacle) for obstacle in self.obstacles
+        )
+        if touching_obstacle and not self._player_touching_obstacle:
+            self.lives = max(0, self.lives - 1)
+        self._player_touching_obstacle = touching_obstacle
+
     def draw(self, surface, font):
         from game import renderer
-        renderer.draw_scene(surface, self.player, self.coins)
+        renderer.draw_scene(surface, self.player, self.coins, self.obstacles)
         renderer.draw_text(surface, font, f"Score: {self.score}", (10, 10))
+        renderer.draw_text(surface, font, f"Lives: {self.lives}", (10, 38))

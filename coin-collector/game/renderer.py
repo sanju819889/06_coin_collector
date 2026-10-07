@@ -9,13 +9,16 @@ WINDOW_SIZE = (WIDTH, HEIGHT)
 
 COLOR_BG = (35, 45, 35)
 COLOR_PLAYER = (80, 180, 255)
+COLOR_OBSTACLE = (220, 70, 70)
 COLOR_TEXT = (255, 255, 255)
 
 
-def draw_scene(surface, player, coins):
+def draw_scene(surface, player, coins, obstacles):
     surface.fill(COLOR_BG)
     for coin in coins:
         pygame.draw.circle(surface, coin.color, (int(coin.x), int(coin.y)), coin.radius)
+    for obstacle in obstacles:
+        pygame.draw.rect(surface, COLOR_OBSTACLE, obstacle, border_radius=3)
     pygame.draw.rect(surface, COLOR_PLAYER, player.get_rect(), border_radius=4)
 
 
