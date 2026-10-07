@@ -46,6 +46,7 @@ class GameEngine:
         collected = check_collection(self.player, self.coins)
         for coin in collected:
             self.score += coin.value
+            self.coins.remove(coin)
 
     def draw(self, surface, font):
         from game import renderer
