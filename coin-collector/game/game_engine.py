@@ -3,6 +3,7 @@ GameEngine: owns the player, coins, and obstacles.
 """
 
 import random
+import math
 import pygame
 
 from game.player import Player
@@ -12,6 +13,7 @@ from game.renderer import WIDTH, HEIGHT
 
 NUM_COINS = 6
 NUM_LIVES = 3
+ROUND_DURATION = 30
 COIN_TYPES = {
     "bronze": (1, (205, 127, 50)),
     "silver": (3, (192, 192, 192)),
@@ -21,14 +23,21 @@ COIN_TYPES = {
 
 class GameEngine:
     def __init__(self):
-        self.player = Player(x=WIDTH / 2, y=HEIGHT / 2)
         self.obstacles = [
             pygame.Rect(90, 100, 80, 30),
             pygame.Rect(520, 110, 30, 85),
             pygame.Rect(140, 350, 100, 30),
             pygame.Rect(500, 360, 90, 30),
         ]
+        self.restart()
+
+    def restart(self):
+        self.player = Player(x=WIDTH / 2, y=HEIGHT / 2)
         self.lives = NUM_LIVES
+        self.score = 0
+        self.time_remaining = ROUND_DURATION
+        self._round_start_time = pygame.time.get_ticks()
+        self.game_over = False
         self._player_touching_obstacle = False
         self.coins = [self._random_coin(coin_type) for coin_type in COIN_TYPES.values()]
         self.coins.extend(
@@ -36,7 +45,6 @@ class GameEngine:
             for _ in range(NUM_COINS - len(self.coins))
         )
         random.shuffle(self.coins)
-        self.score = 0
 
     def _random_coin(self, coin_type=None):
         x = random.randint(30, WIDTH - 30)
@@ -47,6 +55,8 @@ class GameEngine:
         return Coin(x=x, y=y, radius=12, value=value, color=color)
 
     def handle_input(self, keys_pressed):
+        if self.game_over:
+            return
         dx = dy = 0
         if keys_pressed[pygame.K_UP]:
             dy -= self.player.speed
@@ -59,6 +69,15 @@ class GameEngine:
         self.player.move(dx, dy, WIDTH, HEIGHT)
 
     def update(self):
+        if self.game_over:
+            return
+
+        elapsed = (pygame.time.get_ticks() - self._round_start_time) / 1000
+        self.time_remaining = max(0, ROUND_DURATION - elapsed)
+        if self.time_remaining <= 0:
+            self.game_over = True
+            return
+
         collected = check_collection(self.player, self.coins)
         for coin in collected:
             self.score += coin.value
@@ -71,9 +90,18 @@ class GameEngine:
         if touching_obstacle and not self._player_touching_obstacle:
             self.lives = max(0, self.lives - 1)
         self._player_touching_obstacle = touching_obstacle
+        if self.lives == 0:
+            self.game_over = True
 
     def draw(self, surface, font):
         from game import renderer
         renderer.draw_scene(surface, self.player, self.coins, self.obstacles)
         renderer.draw_text(surface, font, f"Score: {self.score}", (10, 10))
         renderer.draw_text(surface, font, f"Lives: {self.lives}", (10, 38))
+        renderer.draw_text(
+            surface, font, f"Time: {math.ceil(self.time_remaining)}", (10, 66)
+        )
+        if self.game_over:
+            renderer.draw_banner(
+                surface, font, f"Game Over! Final Score: {self.score} | Press R"
+            )
